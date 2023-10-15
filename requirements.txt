@@ -1,0 +1,7 @@
+python-telegram-bot==13.12
+environs==9.5.0
+python-dotenv==0.21.0
+more-itertools==9.0.0
+redis==5.0.1
+thefuzz==0.20.0
+vk-api==11.9.9
