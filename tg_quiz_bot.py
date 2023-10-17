@@ -38,24 +38,24 @@ def start(update, context):
 def handle_new_question_request(update, context):
     database = context.bot_data['redis']
     context.user_data['user'] = update.message.chat_id     
-    quiz_set = context.bot_data['quiz_set']
-    number_question = choice(list(quiz_set.keys()))    
+    quiz = context.bot_data['quiz']
+    number_question = choice(list(quiz.keys()))    
     database.set(context.user_data['user'], number_question)
     context.user_data['attempt'] = True        
-    update.message.reply_text(quiz_set[number_question]['Вопрос'], reply_markup=context.user_data['markup'])
+    update.message.reply_text(quiz[number_question]['Вопрос'], reply_markup=context.user_data['markup'])
     return States.CHOISE_BUTTON
 
 
 def handle_solution_attempt(update, context):
     database = context.bot_data['redis']    
     user_answer = update.message.text
-    quiz_set = context.bot_data['quiz_set']     
+    quiz = context.bot_data['quiz']     
     number_question = int(database.get(context.user_data['user']))
     if not context.user_data['attempt']:
         message = 'Нажмите "Новый вопрос"'
         update.message.reply_text(message, reply_markup=context.user_data['markup'])   
         return States.CHOISE_BUTTON 
-    answer_match = fuzz.WRatio(user_answer, quiz_set[number_question]['Ответ'])    
+    answer_match = fuzz.WRatio(user_answer, quiz[number_question]['Ответ'])    
     if answer_match > 70:
         message = 'Правильно! Поздравляю! Для следующего вопроса нажмите "Новый вопрос"' 
         context.user_data['user_score'] += 1
@@ -75,11 +75,11 @@ def show_user_score(update, context):
 
 def show_right_answer(update, context):
     database = context.bot_data['redis']
-    quiz_set = context.bot_data['quiz_set']
+    quiz = context.bot_data['quiz']
     context.user_data['attempt'] = False     
     number_question = int(database.get(context.user_data['user']))  
     update.message.reply_text(
-        quiz_set[number_question]['Ответ'], 
+        quiz[number_question]['Ответ'], 
         reply_markup=context.user_data['markup']
     )
     return States.CHOISE_BUTTON
@@ -114,7 +114,7 @@ def main():
         )
     updater = Updater(token=tg_bot_token, use_context=True)
     dispatcher = updater.dispatcher       
-    dispatcher.bot_data['quiz_set'] = form_quiz_set(get_quiz_file())
+    dispatcher.bot_data['quiz'] = form_quiz_set(get_quiz_file())
     dispatcher.bot_data['redis'] = database
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
