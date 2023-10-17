@@ -9,7 +9,7 @@ from more_itertools import chunked
 from telegram import Bot, ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, ConversationHandler, Filters, MessageHandler, Updater
 from thefuzz import fuzz
-from quiz import form_quiz_set, get_quiz_file
+from quiz import forming_quiz, get_quiz_file
 from logging_api import TelegramLogsHandler
 
 
@@ -114,7 +114,7 @@ def main():
         )
     updater = Updater(token=tg_bot_token, use_context=True)
     dispatcher = updater.dispatcher       
-    dispatcher.bot_data['quiz'] = form_quiz_set(get_quiz_file())
+    dispatcher.bot_data['quiz'] = forming_quiz(get_quiz_file())
     dispatcher.bot_data['redis'] = database
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],

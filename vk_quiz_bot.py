@@ -9,7 +9,7 @@ import redis
 from vk_api.longpoll import VkLongPoll, VkEventType
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from thefuzz import fuzz
-from quiz import form_quiz_set, get_quiz_file
+from quiz import forming_quiz, get_quiz_file
 
 
 def create_keyboard():
@@ -37,16 +37,16 @@ def start(event, vk_api):
     send_answer(event, vk_api, greeting_message)
 
 
-def handle_new_question_request(event, vk_api, database, quiz_set):
+def handle_new_question_request(event, vk_api, database, quiz):
     user = event.user_id
-    number_question = choice(list(quiz_set.keys()))    
+    number_question = choice(list(quiz.keys()))    
     database.set(user, number_question)
     attempt = True
-    send_answer(event, vk_api, quiz_set[number_question]['Вопрос'])
+    send_answer(event, vk_api, quiz[number_question]['Вопрос'])
     print(quiz_set[number_question]['Ответ'])
     return attempt
 
-def handle_solution_attempt(event, vk_api, database, quiz_set, attempt, user_score):
+def handle_solution_attempt(event, vk_api, database, quiz, attempt, user_score):
     user_answer = event.text
     user = event.user_id
     number_question = int(database.get(user))
@@ -54,7 +54,7 @@ def handle_solution_attempt(event, vk_api, database, quiz_set, attempt, user_sco
         message = 'Нажмите "Новый вопрос"'
         send_answer(event, vk_api, message)   
         return attempt, user_score
-    answer_match = fuzz.WRatio(user_answer, quiz_set[number_question]['Ответ'])    
+    answer_match = fuzz.WRatio(user_answer, quiz[number_question]['Ответ'])    
     if answer_match > 70:
         message = 'Правильно! Поздравляю! Для следующего вопроса нажмите "Новый вопрос"' 
         user_score += 1
@@ -70,14 +70,14 @@ def show_user_score(event, vk_api, user_score):
     send_answer(event, vk_api, message)    
 
 
-def show_right_answer(event, vk_api, database, quiz_set):
+def show_right_answer(event, vk_api, database, quiz):
     user = event.user_id
     attempt = False     
     number_question = int(database.get(user))  
     send_answer(
         event,
         vk_api,        
-        quiz_set[number_question]['Ответ']        
+        quiz[number_question]['Ответ']        
     )
     return attempt
 
@@ -98,7 +98,7 @@ def main():
         charset='utf-8',
         decode_responses=True
         )
-    quiz_set = form_quiz_set(get_quiz_file())
+    quiz = forming_quiz(get_quiz_file())
     attempt = False
     user_score = 0    
     for event in longpoll.listen():
@@ -106,13 +106,13 @@ def main():
             if event.text == 'Старт':
                 start(event, vk_api)
             elif event.text == 'Новый вопрос':
-                attempt = handle_new_question_request(event, vk_api, database, quiz_set)
+                attempt = handle_new_question_request(event, vk_api, database, quiz)
             elif event.text == 'Сдаться':
-                attempt = show_right_answer(event, vk_api, database, quiz_set)
+                attempt = show_right_answer(event, vk_api, database, quiz)
             elif event.text == 'Мой счёт':
                 show_user_score(event, vk_api, user_score)
             else:
-                attempt, user_score = handle_solution_attempt(event, vk_api, database, quiz_set, attempt, user_score)           
+                attempt, user_score = handle_solution_attempt(event, vk_api, database, quiz, attempt, user_score)           
    
 
 if __name__ == '__main__':

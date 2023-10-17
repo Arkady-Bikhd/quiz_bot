@@ -1,7 +1,7 @@
 import argparse
 
 
-def form_quiz_set(filename):
+def forming_quiz(filename):
     with open(filename, encoding='KOI8-R') as quiz_file:
         quiz = quiz_file.read().split('\n'*2)       
     quiz_set = dict()
