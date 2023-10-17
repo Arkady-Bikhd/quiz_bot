@@ -36,11 +36,10 @@ def start(update, context):
 
 
 def handle_new_question_request(update, context):
-    database = context.bot_data['redis']
-    context.user_data['user'] = update.message.chat_id     
+    database = context.bot_data['redis']         
     quiz = context.bot_data['quiz']
     number_question = choice(list(quiz.keys()))    
-    database.set(context.user_data['user'], number_question)
+    database.set(update.message.chat_id, number_question)
     context.user_data['attempt'] = True        
     update.message.reply_text(quiz[number_question]['Вопрос'], reply_markup=context.user_data['markup'])
     return States.CHOISE_BUTTON
@@ -50,7 +49,7 @@ def handle_solution_attempt(update, context):
     database = context.bot_data['redis']    
     user_answer = update.message.text
     quiz = context.bot_data['quiz']     
-    number_question = int(database.get(context.user_data['user']))
+    number_question = int(database.get(update.message.chat_id))
     if not context.user_data['attempt']:
         message = 'Нажмите "Новый вопрос"'
         update.message.reply_text(message, reply_markup=context.user_data['markup'])   
@@ -77,7 +76,7 @@ def show_right_answer(update, context):
     database = context.bot_data['redis']
     quiz = context.bot_data['quiz']
     context.user_data['attempt'] = False     
-    number_question = int(database.get(context.user_data['user']))  
+    number_question = int(database.get(update.message.chat_id))  
     update.message.reply_text(
         quiz[number_question]['Ответ'], 
         reply_markup=context.user_data['markup']
