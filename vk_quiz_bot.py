@@ -42,9 +42,9 @@ def handle_new_question_request(event, vk_api, database, quiz):
     number_question = choice(list(quiz.keys()))    
     database.set(user, number_question)
     attempt = True
-    send_answer(event, vk_api, quiz[number_question]['Вопрос'])
-    print(quiz_set[number_question]['Ответ'])
+    send_answer(event, vk_api, quiz[number_question]['Вопрос'])    
     return attempt
+
 
 def handle_solution_attempt(event, vk_api, database, quiz, attempt, user_score):
     user_answer = event.text
