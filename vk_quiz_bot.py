@@ -31,55 +31,70 @@ def send_answer(event, vk_api, bot_answer):
     )
 
 
-def start(event, vk_api):
+def start(event, vk_api, database):
     greeting_message = "Привет, я бот для викторин! " \
                        "Чтобы начать - нажми кнопку Новый вопрос"
+    attempt = False
+    user_score = 0
+    number_question = -1 
+    user = event.user_id
+    database.set(user, f'{number_question},{attempt},{user_score}')
     send_answer(event, vk_api, greeting_message)
 
 
 def handle_new_question_request(event, vk_api, database, quiz):
     user = event.user_id
-    number_question = choice(list(quiz.keys()))    
-    database.set(user, number_question)
-    attempt = True
+    user_status = database.get(user)
+    user_score = user_status.split(',')[2]
+    number_question = choice(list(quiz.keys()))
+    attempt = True    
+    database.set(user, f'{number_question},{attempt},{user_score}')    
     send_answer(event, vk_api, quiz[number_question]['Вопрос'])    
     return attempt
 
 
-def handle_solution_attempt(event, vk_api, database, quiz, attempt, user_score):
+def handle_solution_attempt(event, vk_api, database, quiz):
     user_answer = event.text
     user = event.user_id
-    number_question = int(database.get(user))
+    user_status = database.get(user).split(',')
+    number_question = int(user_status[0])
+    attempt = bool(user_status[1])
+    user_score = int(user_status[2])
     if not attempt:
         message = 'Нажмите "Новый вопрос"'
         send_answer(event, vk_api, message)   
-        return attempt, user_score
+        return
     answer_match = fuzz.WRatio(user_answer, quiz[number_question]['Ответ'])    
     if answer_match > 70:
         message = 'Правильно! Поздравляю! Для следующего вопроса нажмите "Новый вопрос"' 
         user_score += 1
         attempt = False
+        database.set(user, f'{number_question},{attempt},{user_score}')
     else:        
         message = 'Неправильно! Попробуйте ещё раз'
-    send_answer(event, vk_api, message)
-    return attempt, user_score     
+    send_answer(event, vk_api, message)        
 
 
-def show_user_score(event, vk_api, user_score):
+def show_user_score(event, vk_api, database):
+    user = event.user_id
+    user_status = database.get(user)
+    user_score = user_status.split(',')[2]
     message = f'Вы дали {user_score} правильных ответов'
     send_answer(event, vk_api, message)    
 
 
 def show_right_answer(event, vk_api, database, quiz):
     user = event.user_id
-    attempt = False     
-    number_question = int(database.get(user))  
+    user_status = database.get(user).split(',')
+    number_question = int(user_status[0])
+    user_score = user_status[2]
+    attempt = False
+    database.set(user, f'{number_question},{attempt},{user_score}')  
     send_answer(
         event,
         vk_api,        
         quiz[number_question]['Ответ']        
-    )
-    return attempt
+    )    
 
 
 def main():
@@ -98,21 +113,19 @@ def main():
         charset='utf-8',
         decode_responses=True
         )
-    quiz = forming_quiz(get_quiz_file())
-    attempt = False
-    user_score = 0    
+    quiz = forming_quiz(get_quiz_file())       
     for event in longpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
             if event.text == 'Старт':
-                start(event, vk_api)
+                start(event, vk_api, database)
             elif event.text == 'Новый вопрос':
-                attempt = handle_new_question_request(event, vk_api, database, quiz)
+                handle_new_question_request(event, vk_api, database, quiz)
             elif event.text == 'Сдаться':
-                attempt = show_right_answer(event, vk_api, database, quiz)
+                show_right_answer(event, vk_api, database, quiz)
             elif event.text == 'Мой счёт':
-                show_user_score(event, vk_api, user_score)
+                show_user_score(event, vk_api, database)
             else:
-                attempt, user_score = handle_solution_attempt(event, vk_api, database, quiz, attempt, user_score)           
+                handle_solution_attempt(event, vk_api, database, quiz)           
    
 
 if __name__ == '__main__':
