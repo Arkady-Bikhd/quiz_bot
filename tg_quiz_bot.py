@@ -17,7 +17,8 @@ logger = logging.getLogger('quiz_bot')
 
 
 class States(Enum):    
-    CHOISE_BUTTON = auto()   
+    CHOISE_BUTTON = auto()
+    ATTEMT = auto()   
 
 
 def start(update, context):    
@@ -39,30 +40,25 @@ def handle_new_question_request(update, context):
     database = context.bot_data['redis']         
     quiz = context.bot_data['quiz']
     number_question = choice(list(quiz.keys()))    
-    database.set(update.message.chat_id, number_question)
-    context.user_data['attempt'] = True        
+    database.set(update.message.chat_id, number_question)          
     update.message.reply_text(quiz[number_question]['Вопрос'], reply_markup=context.user_data['markup'])
-    return States.CHOISE_BUTTON
+    return States.ATTEMT
 
 
 def handle_solution_attempt(update, context):
     database = context.bot_data['redis']    
     user_answer = update.message.text
     quiz = context.bot_data['quiz']     
-    number_question = int(database.get(update.message.chat_id))
-    if not context.user_data['attempt']:
-        message = 'Нажмите "Новый вопрос"'
-        update.message.reply_text(message, reply_markup=context.user_data['markup'])   
-        return States.CHOISE_BUTTON 
+    number_question = int(database.get(update.message.chat_id))    
     answer_match = fuzz.WRatio(user_answer, quiz[number_question]['Ответ'])    
     if answer_match > 70:
         message = 'Правильно! Поздравляю! Для следующего вопроса нажмите "Новый вопрос"' 
         context.user_data['user_score'] += 1
-        context.user_data['attempt'] = False
-    else:        
-        message = 'Неправильно! Попробуйте ещё раз'
+        update.message.reply_text(message, reply_markup=context.user_data['markup'])   
+        return States.CHOISE_BUTTON
+    message = 'Неправильно! Попробуйте ещё раз'    
     update.message.reply_text(message, reply_markup=context.user_data['markup'])          
-    return States.CHOISE_BUTTON
+    return States.ATTEMT
 
 
 def show_user_score(update, context):
@@ -74,8 +70,7 @@ def show_user_score(update, context):
 
 def show_right_answer(update, context):
     database = context.bot_data['redis']
-    quiz = context.bot_data['quiz']
-    context.user_data['attempt'] = False     
+    quiz = context.bot_data['quiz']        
     number_question = int(database.get(update.message.chat_id))  
     update.message.reply_text(
         quiz[number_question]['Ответ'], 
@@ -124,14 +119,16 @@ def main():
                 ),
                 MessageHandler(
                     Filters.text("Мой счёт"), show_user_score,
-                ),
+                ),                           
+            ],
+            States.ATTEMT:[                
                 MessageHandler(
                     Filters.text("Сдаться"), show_right_answer,
                 ),
                 MessageHandler(
-                    Filters.text, handle_solution_attempt
-                ),
-            ],       
+                    Filters.text, handle_solution_attempt        
+                ),                 
+            ]       
         },
         fallbacks=[],
         allow_reentry=True,
