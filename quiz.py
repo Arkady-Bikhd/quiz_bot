@@ -4,7 +4,7 @@ import argparse
 def forming_quiz(filename):
     with open(filename, encoding='KOI8-R') as quiz_file:
         quiz = quiz_file.read().split('\n'*2)       
-    quiz_set = dict()
+    quiz_collection = dict()
     question_answer = dict()
     number_queston = 1            
     for line in quiz:        
@@ -15,10 +15,10 @@ def forming_quiz(filename):
             question_answer['Ответ'] = line.split(':\n')[1]
             is_answer = True                   
         if is_answer:
-            quiz_set[number_queston] = question_answer
+            quiz_collection[number_queston] = question_answer
             number_queston += 1
             question_answer = dict()             
-    return quiz_set  
+    return quiz_collection  
 
 
 def get_quiz_file():
